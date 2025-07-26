@@ -335,7 +335,7 @@ export class ReminderServiceImpl implements ReminderService {
           completed: expectedCompleted !== undefined ? expectedCompleted : false,
           notes: undefined,
           creation_date: this.formatDate(creationDate || ''),
-          due_date: dueDate && dueDate.trim() ? this.formatDate(dueDate) : undefined,
+          due_date: dueDate && dueDate.trim() && dueDate !== 'missing value' ? this.formatDate(dueDate) : undefined,
           priority: this.mapAppleScriptPriorityToString(parseInt(priority || '0')),
           list_name: listName,
         };
