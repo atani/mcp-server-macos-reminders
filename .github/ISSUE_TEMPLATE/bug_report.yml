@@ -1,0 +1,130 @@
+name: 🐛 Bug Report
+description: バグを報告する
+title: "[Bug] "
+labels: ["bug", "needs-triage"]
+assignees:
+  - atani
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        バグの報告をありがとうございます。詳細な情報を提供していただくことで、問題の特定と修正が迅速に行えます。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 🐛 問題の説明
+      description: 発生している問題について詳しく説明してください
+      placeholder: バグの内容を具体的に記載してください
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 🔄 再現手順
+      description: バグを再現するための手順を教えてください
+      placeholder: |
+        1. 〜を実行
+        2. 〜をクリック
+        3. エラーが発生
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: ✅ 期待される動作
+      description: 本来どのような動作をするべきかを説明してください
+      placeholder: 期待される正常な動作を記載してください
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: ❌ 実際の動作
+      description: 実際に何が起こったかを説明してください
+      placeholder: 実際に発生した動作やエラーを記載してください
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 📋 ログ・エラーメッセージ
+      description: 関連するログやエラーメッセージがあれば貼り付けてください
+      render: shell
+      placeholder: エラーログやスタックトレースをここに貼り付けてください
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: 💻 オペレーティングシステム
+      description: 使用しているOSを選択してください
+      options:
+        - macOS 14 (Sonoma)
+        - macOS 13 (Ventura) 
+        - macOS 12 (Monterey)
+        - macOS 11 (Big Sur)
+        - その他のmacOS
+        - macOS以外 (非対応)
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: 🟢 Node.js バージョン
+      description: 使用しているNode.jsのバージョンを記載してください (`node --version` で確認可能)
+      placeholder: v20.x.x
+    validations:
+      required: true
+
+  - type: input
+    id: npm-version
+    attributes:
+      label: 📦 npm バージョン
+      description: 使用しているnpmのバージョンを記載してください (`npm --version` で確認可能)
+      placeholder: x.x.x
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: 🔧 関連コンポーネント
+      description: 問題が発生している箇所を選択してください
+      options:
+        - AppleScript実行エンジン
+        - MCPツール (get_reminder_lists等)
+        - MCPリソース
+        - ReminderService
+        - 型定義
+        - ビルド・設定
+        - テスト
+        - その他
+      multiple: true
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: ✅ 確認事項
+      description: 以下の項目を確認してください
+      options:
+        - label: 既存のIssueで同様の問題が報告されていないことを確認しました
+          required: true
+        - label: 最新版を使用しています
+          required: true
+        - label: macOSのリマインダーアプリへのアクセス権限が付与されています
+          required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 📝 追加情報
+      description: その他、問題の解決に役立つ情報があれば記載してください
+      placeholder: 関連する設定、環境変数、その他の詳細情報

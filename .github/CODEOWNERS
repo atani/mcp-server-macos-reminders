@@ -1,0 +1,29 @@
+# Global code owners
+# These owners will be the default owners for everything in the repo
+* @atani
+
+# Core application code
+/src/ @atani
+/src/applescript/ @atani
+/src/services/ @atani
+/src/tools/ @atani
+/src/resources/ @atani
+
+# Test code
+/tests/ @atani
+
+# Configuration files - require careful review
+package.json @atani
+package-lock.json @atani
+tsconfig.json @atani
+
+# Documentation
+README.md @atani
+CLAUDE.md @atani
+
+# CI/CD and GitHub configuration
+/.github/ @atani
+/.github/workflows/ @atani
+
+# Type definitions - critical for type safety
+/src/types.ts @atani

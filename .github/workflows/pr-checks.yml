@@ -1,0 +1,187 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # Check PR title format
+  pr-title-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check PR title
+      uses: amannn/action-semantic-pull-request@v5
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        types: |
+          feat
+          fix
+          docs
+          style
+          refactor
+          test
+          chore
+        scopes: |
+          core
+          tools
+          resources
+          tests
+          ci
+          deps
+        requireScope: false
+
+  # Validate changed files
+  changed-files:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get changed files
+      id: changed-files
+      uses: tj-actions/changed-files@v40
+      with:
+        files: |
+          src/**/*.ts
+          tests/**/*.ts
+          package.json
+          package-lock.json
+          tsconfig.json
+
+    - name: List changed files
+      if: steps.changed-files.outputs.any_changed == 'true'
+      run: |
+        echo "Changed files:"
+        echo "${{ steps.changed-files.outputs.all_changed_files }}"
+
+    - name: Setup Node.js
+      if: steps.changed-files.outputs.any_changed == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      if: steps.changed-files.outputs.any_changed == 'true'
+      run: npm ci
+
+    - name: Validate TypeScript files
+      if: steps.changed-files.outputs.any_changed == 'true'
+      run: |
+        # Run type check on changed TypeScript files
+        if echo "${{ steps.changed-files.outputs.all_changed_files }}" | grep -q "\.ts$"; then
+          echo "TypeScript files changed, running type check..."
+          npm run build
+        fi
+
+    - name: Run tests for changed files
+      if: steps.changed-files.outputs.any_changed == 'true'
+      run: |
+        # Run related tests
+        npm run test:unit
+
+  # Check code quality
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linter with annotations
+      run: |
+        npm run lint 2>&1 | tee lint-results.txt
+        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+          echo "::error::Linting failed. Please fix the issues above."
+          exit 1
+        fi
+
+    - name: Check formatting
+      run: |
+        npm run format -- --check || {
+          echo "::error::Code formatting issues found. Run 'npm run format' to fix."
+          exit 1
+        }
+
+  # Test coverage check
+  coverage-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run coverage
+      run: npm run test:coverage
+
+    - name: Check coverage threshold
+      run: |
+        # Extract coverage percentage from Jest output
+        COVERAGE=$(npm run test:coverage 2>&1 | grep -oP 'All files.*?(\d+\.\d+)' | grep -oP '\d+\.\d+' | head -1)
+        echo "Coverage: ${COVERAGE}%"
+        
+        # Set minimum coverage threshold (80%)
+        THRESHOLD=80
+        
+        if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+          echo "::error::Coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"
+          exit 1
+        else
+          echo "::notice::Coverage ${COVERAGE}% meets threshold ${THRESHOLD}%"
+        fi
+
+  # Dependency validation
+  deps-validation:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Validate package-lock.json
+      run: |
+        if [ -f package-lock.json ]; then
+          npm ci --frozen-lockfile
+        else
+          echo "::error::package-lock.json not found"
+          exit 1
+        fi
+
+    - name: Check for unused dependencies
+      run: |
+        npx depcheck --ignores="@types/*,power-assert,@typescript-eslint/*,eslint,prettier,jest,ts-jest,ts-node" || {
+          echo "::warning::Unused dependencies found. Consider removing them."
+        }
+
+    - name: Validate peer dependencies
+      run: |
+        npm ls --depth=0 2>&1 | grep -i "peer dep" && {
+          echo "::error::Peer dependency issues found"
+          exit 1
+        } || {
+          echo "::notice::All peer dependencies satisfied"
+        }
