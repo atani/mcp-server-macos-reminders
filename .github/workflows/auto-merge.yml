@@ -25,10 +25,11 @@ jobs:
     runs-on: ubuntu-latest
     # Only run for dependency update PRs
     if: |
-      (github.event.pull_request.user.login == 'dependabot[bot]' ||
-       github.event.pull_request.user.login == 'renovate[bot]' ||
-       github.event.pull_request.user.login == 'renovate-bot') &&
-      contains(github.event.pull_request.labels.*.name, 'dependencies')
+      github.event.pull_request && (
+        github.event.pull_request.user.login == 'dependabot[bot]' ||
+        github.event.pull_request.user.login == 'renovate[bot]' ||
+        github.event.pull_request.user.login == 'renovate-bot'
+      )
     
     steps:
       - name: Checkout code
