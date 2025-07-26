@@ -1,0 +1,162 @@
+name: Auto Merge Dependency Updates
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+  check_suite:
+    types:
+      - completed
+  workflow_run:
+    workflows: ["CI", "PR Checks"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    # Only run for dependency update PRs
+    if: |
+      (github.event.pull_request.user.login == 'dependabot[bot]' ||
+       github.event.pull_request.user.login == 'renovate[bot]' ||
+       github.event.pull_request.user.login == 'renovate-bot') &&
+      contains(github.event.pull_request.labels.*.name, 'dependencies')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check PR status
+        id: pr-status
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // Get PR details
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            // Check if all checks have passed
+            const { data: checkRuns } = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pullRequest.head.sha
+            });
+            
+            const allChecksPassed = checkRuns.check_runs.every(
+              check => check.status === 'completed' && check.conclusion === 'success'
+            );
+            
+            // Check if PR is mergeable
+            const isMergeable = pullRequest.mergeable_state === 'clean';
+            
+            console.log(`All checks passed: ${allChecksPassed}`);
+            console.log(`PR is mergeable: ${isMergeable}`);
+            
+            return {
+              canMerge: allChecksPassed && isMergeable,
+              prNumber: pr.number
+            };
+
+      - name: Auto-approve PR
+        if: steps.pr-status.outputs.canMerge == 'true'
+        uses: hmarr/auto-approve-action@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge
+        if: steps.pr-status.outputs.canMerge == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // Enable auto-merge
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                merge_method: 'squash'
+              });
+              console.log('PR merged successfully');
+            } catch (error) {
+              // If direct merge fails, try enabling auto-merge
+              try {
+                const mutation = `
+                  mutation($pullRequestId: ID!) {
+                    enablePullRequestAutoMerge(input: {
+                      pullRequestId: $pullRequestId,
+                      mergeMethod: SQUASH
+                    }) {
+                      pullRequest {
+                        autoMergeRequest {
+                          enabledAt
+                        }
+                      }
+                    }
+                  }
+                `;
+                
+                await github.graphql(mutation, {
+                  pullRequestId: pr.node_id
+                });
+                console.log('Auto-merge enabled');
+              } catch (graphqlError) {
+                console.error('Failed to enable auto-merge:', graphqlError);
+              }
+            }
+
+  # Additional job to handle security updates with higher priority
+  auto-merge-security:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event.pull_request.user.login == 'dependabot[bot]' ||
+       github.event.pull_request.user.login == 'renovate[bot]') &&
+      contains(github.event.pull_request.labels.*.name, 'security')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Fast-track security updates
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // Add priority label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['priority:high']
+            });
+            
+            // Auto-approve security updates
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              event: 'APPROVE',
+              body: '🔒 Auto-approved security update'
+            });
+            
+            console.log('Security update fast-tracked');

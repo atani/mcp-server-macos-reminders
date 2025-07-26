@@ -1,0 +1,81 @@
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          # Fail the workflow if high or critical vulnerabilities are found
+          fail-on-severity: high
+          # Allow specific licenses
+          allow-licenses: MIT, Apache-2.0, BSD-3-Clause, BSD-2-Clause, ISC
+          # Deny specific licenses
+          deny-licenses: GPL-3.0, AGPL-3.0
+          # Report but don't fail on moderate vulnerabilities
+          warn-on-openssf-scorecard-level: 3
+          # Comment on PR with vulnerability details
+          comment-summary-in-pr: always
+
+      - name: Check for breaking changes
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) return;
+            
+            // Get the diff
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            // Check for potential breaking changes
+            const breakingPatterns = [
+              /major version/i,
+              /breaking change/i,
+              /removed.*export/i,
+              /changed.*signature/i
+            ];
+            
+            let hasBreakingChanges = false;
+            for (const file of files) {
+              if (file.filename === 'package.json' && file.patch) {
+                for (const pattern of breakingPatterns) {
+                  if (pattern.test(file.patch)) {
+                    hasBreakingChanges = true;
+                    break;
+                  }
+                }
+              }
+            }
+            
+            if (hasBreakingChanges) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: ['breaking-change', 'needs-review']
+              });
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: '⚠️ **Potential Breaking Changes Detected**\n\nThis PR may contain breaking changes. Please review carefully before merging.'
+              });
+            }

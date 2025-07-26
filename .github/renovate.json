@@ -1,0 +1,87 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":automergeMinor",
+    "group:allNonMajor"
+  ],
+  "timezone": "Asia/Tokyo",
+  "schedule": ["after 4am and before 8am on monday"],
+  "labels": ["dependencies", "automated"],
+  "assignees": ["atani"],
+  "reviewers": ["atani"],
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "description": "Automerge non-major updates",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "description": "Require approval for major updates",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "description": "Group ESLint packages",
+      "matchPackagePatterns": ["eslint"],
+      "groupName": "ESLint packages",
+      "groupSlug": "eslint"
+    },
+    {
+      "description": "Group TypeScript packages",
+      "matchPackagePatterns": ["typescript", "@types/"],
+      "groupName": "TypeScript packages",
+      "groupSlug": "typescript"
+    },
+    {
+      "description": "Group test packages",
+      "matchPackagePatterns": ["jest", "power-assert"],
+      "groupName": "Test packages",
+      "groupSlug": "test"
+    },
+    {
+      "description": "Security updates - high priority",
+      "matchDatasources": ["npm"],
+      "matchUpdateTypes": ["patch"],
+      "prPriority": 10,
+      "labels": ["security", "dependencies", "automated"]
+    }
+  ],
+  "postUpdateOptions": [
+    "npmDedupe",
+    "yarnDedupeHighest"
+  ],
+  "prCreation": "immediate",
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "rebaseWhen": "behind-base-branch",
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
+  "commitMessageAction": "update",
+  "commitMessageTopic": "dependency {{depName}}",
+  "commitMessageExtra": "to {{newVersion}}",
+  "npm": {
+    "minimumReleaseAge": "3 days",
+    "stabilityDays": 3
+  },
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "automerge": true,
+    "prPriority": 20
+  },
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "🔄 Dependency Updates Dashboard",
+  "dependencyDashboardHeader": "This dashboard provides an overview of all pending dependency updates.",
+  "suppressNotifications": ["prIgnoreNotification"],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**"
+  ]
+}
