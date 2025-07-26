@@ -56,7 +56,9 @@ interface GetRemindersResult {
     completed: boolean;
     notes?: string;
     due_date?: string; // ISO 8601 format
+    alert_date?: string; // ISO 8601 format - When to show notification (remind me date)
     creation_date: string; // ISO 8601 format
+    priority?: string; // 'none', 'low', 'medium', 'high'
   }>;
 }
 ```
@@ -87,6 +89,7 @@ interface CreateReminderParams {
   name: string;
   notes?: string;
   due_date?: string; // ISO 8601 format
+  alert_date?: string; // ISO 8601 format - When to show notification (remind me date)
   priority?: 'none' | 'low' | 'medium' | 'high';
 }
 
@@ -106,6 +109,7 @@ tell application "Reminders"
   set name of newReminder to "リマインダー名"
   if notes is not "" then set body of newReminder to notes
   if due_date is not "" then set due date of newReminder to date due_date
+  if alert_date is not "" then set remind me date of newReminder to date alert_date
   if priority is not "none" then set priority of newReminder to priority
 end tell
 ```
@@ -253,6 +257,38 @@ interface ReminderListResource {
   };
 }
 ```
+
+## 機能制限および既知の問題
+
+### ✅ **実装済み機能**
+
+#### 早期リマインダー（アラート機能）
+- `alert_date`パラメータでリマインダーの通知タイミングを設定可能
+- 期日（`due_date`）とは独立して通知日時を指定
+- AppleScriptの`remind me date`プロパティを使用
+
+```typescript
+// 例：期日は明日だが、今日の夕方に通知
+{
+  name: "明日の会議準備",
+  due_date: "2025-07-28T09:00:00Z",    // 明日9時が期日
+  alert_date: "2025-07-27T18:00:00Z"   // 今日18時に通知
+}
+```
+
+### ❌ **実装不可能な機能**
+
+#### 繰り返し設定
+macOSリマインダーアプリのAppleScript APIには、繰り返し（recurrence）設定のプロパティが存在しません。これは2017年以降から知られている制限です。
+
+**制限の詳細：**
+- AppleScript辞書に`repeat`や`recurrence`プロパティが存在しない
+- 既存の繰り返しリマインダーの設定を読み取ることも不可能
+- 回避策として.icsファイルの直接編集が必要だが、MCPサーバーでは実装困難
+
+**リファレンス：**
+- [MacScripter - Recurring reminders](https://www.macscripter.net/t/recurring-reminders/70871)
+- [Ask Different - Weekly recurring reminder via AppleScript](https://apple.stackexchange.com/questions/427749/how-can-i-make-a-weekly-recurring-reminder-via-applescript)
 
 ## 実装詳細
 
@@ -520,3 +556,46 @@ npm start
   }
 }
 ```
+
+## 既知の制限
+
+### AppleScriptのアラート機能の制限
+
+AppleScriptを通じたリマインダーのアラート設定には以下の制限があります：
+
+#### 1. 早期アラート（事前通知）について
+
+- **制限**: AppleScriptでは`due date`と`remind me date`が基本的に連動しており、期日より前の時刻にアラートを設定できません
+- **現象**: `alert_date`を`due_date`より前に設定しても、実際のアラート時刻は期日と同じになります
+- **理由**: macOSのRemindersアプリでは、AppleScript APIレベルでこれらの日時が統合されて処理されるため
+
+#### 2. 代替案
+
+早期リマインダー（例：5分前、15分前のアラート）を設定したい場合：
+
+1. **手動設定**: リマインダーアプリで直接「早期アラート」を設定
+2. **アラート専用リマインダー**: 別途アラート用のリマインダーを作成
+
+```typescript
+// 例：メインタスクの15分前にアラート用リマインダーを作成
+await createReminder({
+  list_name: '仕事',
+  name: '【アラート】プレゼン資料作成の準備時間',
+  due_date: '2025-07-27T14:45:00Z'  // 15分前
+});
+
+await createReminder({
+  list_name: '仕事', 
+  name: 'プレゼン資料作成',
+  due_date: '2025-07-27T15:00:00Z'   // 本来の期日
+});
+```
+
+#### 3. 繰り返し設定の制限
+
+- **制限**: AppleScriptでは繰り返し（recurrence）の設定がサポートされていません
+- **代替案**: リマインダーアプリで手動設定が必要
+
+#### 4. 今後の対応
+
+これらの制限は、macOSのRemindersアプリのAppleScript APIの仕様によるものです。将来的にAppleがAPIを拡張した場合は、対応を検討します。

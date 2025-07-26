@@ -94,8 +94,8 @@ describe('ReminderService', () => {
      */
 
     it('should return reminders from specified list', async () => {
-      // Arrange - Updated format to match new |||separator output
-      const mockOutput = 'Task 1|||2024-01-02T17:00:00Z|||1|||2024-01-01T09:00:00Z\nTask 2|||missing value|||0|||2024-01-01T10:00:00Z';
+      // Arrange - Updated format to match new |||separator output with alert_date
+      const mockOutput = 'Task 1|||2024-01-02T17:00:00Z|||2024-01-02T16:00:00Z|||1|||2024-01-01T09:00:00Z\nTask 2|||missing value|||missing value|||0|||2024-01-01T10:00:00Z';
       mockExecutor.setDefaultResponse(mockOutput);
 
       // Act
@@ -110,17 +110,19 @@ describe('ReminderService', () => {
       assert(typeof firstReminder.id === 'string');
       assert(firstReminder.id.length > 0);
       assert(firstReminder.due_date !== undefined);
+      assert(firstReminder.alert_date !== undefined); // Alert date should be set
       assert(firstReminder.priority === 'high'); // Priority 1 = high
       
       const secondReminder = result.reminders[1];
       assert(secondReminder.name === 'Task 2');
       assert(secondReminder.due_date === undefined); // missing value
+      assert(secondReminder.alert_date === undefined); // missing value
       assert(secondReminder.priority === 'none'); // Priority 0 = none
     });
 
     it('should parse reminders with proper due dates using new format', async () => {
-      // Arrange - Test the new |||separator format specifically
-      const mockOutput = 'Meeting|||2025-07-27T09:00:00Z|||5|||2025-07-26T10:00:00Z';
+      // Arrange - Test the new |||separator format specifically with alert_date
+      const mockOutput = 'Meeting|||2025-07-27T09:00:00Z|||2025-07-27T08:00:00Z|||5|||2025-07-26T10:00:00Z';
       mockExecutor.setDefaultResponse(mockOutput);
 
       // Act
@@ -131,13 +133,14 @@ describe('ReminderService', () => {
       const reminder = result.reminders[0];
       assert(reminder.name === 'Meeting');
       assert(reminder.due_date === '2025-07-27T09:00:00.000Z'); // Should be converted to ISO
+      assert(reminder.alert_date === '2025-07-27T08:00:00.000Z'); // Should be converted to ISO
       assert(reminder.priority === 'medium'); // Priority 5 = medium
       assert(reminder.creation_date === '2025-07-26T10:00:00.000Z');
     });
 
     it('should filter by completion status when specified', async () => {
-      // Arrange - Updated format to match new |||separator output
-      const mockOutput = 'Completed Task|||2024-01-02T17:00:00Z|||1|||2024-01-01T09:00:00Z';
+      // Arrange - Updated format to match new |||separator output with alert_date
+      const mockOutput = 'Completed Task|||2024-01-02T17:00:00Z|||2024-01-02T16:00:00Z|||1|||2024-01-01T09:00:00Z';
       mockExecutor.setDefaultResponse(mockOutput);
 
       // Act
@@ -329,7 +332,7 @@ describe('ReminderService', () => {
       } catch (error) {
         const err = error as any;
         assert(err.code === ErrorCode.INVALID_DATE_FORMAT);
-        assert(err.message.includes('Invalid date format'));
+        assert(err.message.includes('Invalid due_date format'));
       }
     });
 
@@ -370,6 +373,45 @@ describe('ReminderService', () => {
       // Verify AppleScript uses seconds arithmetic
       const executedScript = mockExecutor.getLastExecutedScript();
       assert(executedScript?.includes('set dueDateTime to (current date) +'));
+    });
+
+    it('should create reminder with alert_date', async () => {
+      // Arrange
+      mockExecutor.setDefaultResponse('reminder-123');
+
+      // Act
+      const result = await service.createReminder({
+        list_name: '仕事',
+        name: 'Task with alert',
+        due_date: '2025-07-27T15:00:00Z',
+        alert_date: '2025-07-27T14:00:00Z'
+      });
+
+      // Assert
+      assert(result.success === true);
+      assert(result.warning !== undefined); // Should include warning about early alert limitation
+      
+      // Verify AppleScript sets both due date and alert date
+      const executedScript = mockExecutor.getLastExecutedScript();
+      assert(executedScript?.includes('set dueDateTime to (current date) +'));
+      assert(executedScript?.includes('set alertDateTime to (current date) +'));
+      assert(executedScript?.includes('set remind me date of newReminder to alertDateTime'));
+    });
+
+    it('should validate alert_date format', async () => {
+      // Act & Assert - invalid alert_date
+      try {
+        await service.createReminder({
+          list_name: '仕事',
+          name: 'Task',
+          alert_date: 'invalid-date'
+        });
+        assert.fail('Expected error to be thrown');
+      } catch (error) {
+        const err = error as any;
+        assert(err.code === ErrorCode.INVALID_DATE_FORMAT);
+        assert(err.message.includes('Invalid alert_date format'));
+      }
     });
 
     it('should handle executor errors gracefully', async () => {
@@ -629,12 +671,12 @@ describe('ReminderService', () => {
  * ✅ Constructor
  * ✅ getReminderLists (3 tests)
  * ✅ getReminders (6 tests)  
- * ✅ createReminder (9 tests)
+ * ✅ createReminder (11 tests)
  * ✅ completeReminder (3 tests)
  * ✅ deleteReminder (3 tests)
  * ✅ searchReminders (6 tests)
  * 
- * Total: 31 unit tests covering all public methods
+ * Total: 33 unit tests covering all public methods
  * Focus: Logic validation, parameter validation, error handling
  * Mock Strategy: Full isolation from AppleScript execution
  */
