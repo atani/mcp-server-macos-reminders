@@ -5,6 +5,9 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { writeFileSync, unlinkSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import { AppleScriptExecutor, ErrorCode } from '../types';
 
 const execAsync = promisify(exec);
@@ -21,10 +24,15 @@ export class AppleScriptExecutorImpl implements AppleScriptExecutor {
       throw this.createError(ErrorCode.INVALID_PARAMETER, 'Script cannot be empty');
     }
 
-    const sanitizedScript = this.sanitizeScript(script);
+    // For Japanese text and complex scripts, use temporary file approach
+    const tempFileName = `applescript_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.scpt`;
+    const tempFilePath = join(tmpdir(), tempFileName);
 
     try {
-      const { stdout, stderr } = await execAsync(`osascript -e '${sanitizedScript}'`);
+      // Write script to temporary file with UTF-8 encoding
+      writeFileSync(tempFilePath, script, 'utf8');
+      
+      const { stdout, stderr } = await execAsync(`osascript "${tempFilePath}"`);
 
       if (stderr) {
         // Parse AppleScript specific errors
@@ -59,6 +67,13 @@ export class AppleScriptExecutorImpl implements AppleScriptExecutor {
         ErrorCode.APPLESCRIPT_ERROR,
         `Failed to execute AppleScript: ${err.message || 'Unknown error'}`
       );
+    } finally {
+      // Clean up temporary file
+      try {
+        unlinkSync(tempFilePath);
+      } catch {
+        // Ignore cleanup errors
+      }
     }
   }
 

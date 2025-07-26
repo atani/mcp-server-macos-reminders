@@ -63,11 +63,13 @@ export class ReminderServiceImpl implements ReminderService {
           '    if completed of reminderItem is false then',
           '      set reminderName to name of reminderItem',
           '      set dueDate to due date of reminderItem',
+          '      set alertDate to remind me date of reminderItem',
           '      set reminderPriority to priority of reminderItem',
           '      set creationDate to creation date of reminderItem',
           '      if dueDate is missing value then set dueDate to ""',
+          '      if alertDate is missing value then set alertDate to ""',
           '      if reminderPriority is missing value then set reminderPriority to 0',
-          '      set outputText to outputText & reminderName & "|||" & dueDate & "|||" & reminderPriority & "|||" & creationDate & "\\n"',
+          '      set outputText to outputText & reminderName & "|||" & dueDate & "|||" & alertDate & "|||" & reminderPriority & "|||" & creationDate & "\\n"',
           '    end if',
           '  end repeat',
           '  return outputText'
@@ -80,11 +82,13 @@ export class ReminderServiceImpl implements ReminderService {
           '    if completed of reminderItem is true then',
           '      set reminderName to name of reminderItem',
           '      set dueDate to due date of reminderItem',
+          '      set alertDate to remind me date of reminderItem',
           '      set reminderPriority to priority of reminderItem',
           '      set creationDate to creation date of reminderItem',
           '      if dueDate is missing value then set dueDate to ""',
+          '      if alertDate is missing value then set alertDate to ""',
           '      if reminderPriority is missing value then set reminderPriority to 0',
-          '      set outputText to outputText & reminderName & "|||" & dueDate & "|||" & reminderPriority & "|||" & creationDate & "\\n"',
+          '      set outputText to outputText & reminderName & "|||" & dueDate & "|||" & alertDate & "|||" & reminderPriority & "|||" & creationDate & "\\n"',
           '    end if',
           '  end repeat',
           '  return outputText'
@@ -96,11 +100,13 @@ export class ReminderServiceImpl implements ReminderService {
           '  repeat with reminderItem in every reminder of reminderList',
           '    set reminderName to name of reminderItem',
           '    set dueDate to due date of reminderItem',
+          '    set alertDate to remind me date of reminderItem',
           '    set reminderPriority to priority of reminderItem',
           '    set creationDate to creation date of reminderItem',
           '    if dueDate is missing value then set dueDate to ""',
+          '    if alertDate is missing value then set alertDate to ""',
           '    if reminderPriority is missing value then set reminderPriority to 0',
-          '    set outputText to outputText & reminderName & "|||" & dueDate & "|||" & reminderPriority & "|||" & creationDate & "\\n"',
+          '    set outputText to outputText & reminderName & "|||" & dueDate & "|||" & alertDate & "|||" & reminderPriority & "|||" & creationDate & "\\n"',
           '  end repeat',
           '  return outputText'
         );
@@ -146,6 +152,13 @@ export class ReminderServiceImpl implements ReminderService {
         set due date of newReminder to dueDateTime`;
       }
 
+      if (params.alert_date) {
+        const alertComponents = this.parseISODateToComponents(params.alert_date);
+        script += `
+        set alertDateTime to (current date) + ${alertComponents.totalSeconds}
+        set remind me date of newReminder to alertDateTime`;
+      }
+
       if (params.priority && params.priority !== 'none') {
         const priorityValue = this.mapPriorityToAppleScript(params.priority);
         script += `
@@ -158,9 +171,20 @@ export class ReminderServiceImpl implements ReminderService {
 
       const reminderId = await this.executor.execute(script);
 
+      // Generate warning message if alert_date was provided but may not work as expected
+      let warningMessage = undefined;
+      if (params.alert_date && params.due_date) {
+        const alertTime = new Date(params.alert_date).getTime();
+        const dueTime = new Date(params.due_date).getTime();
+        if (alertTime < dueTime) {
+          warningMessage = '現在のAPIでは早期リマインダー（期日より前のアラート）の設定はサポートされていないようで、アラートは期日と同じ時刻に設定されています。早期リマインダーの設定は、リマインダーアプリで直接設定していただく必要があります。';
+        }
+      }
+
       return {
         success: true,
         reminder_id: reminderId.trim(),
+        warning: warningMessage,
       };
     } catch (error) {
       const err = error as any;
@@ -328,7 +352,7 @@ export class ReminderServiceImpl implements ReminderService {
       .split('\n')
       .filter((line) => line.trim())
       .map((line) => {
-        const [name, dueDate, priority, creationDate] = line.split('|||');
+        const [name, dueDate, alertDate, priority, creationDate] = line.split('|||');
         return {
           name: name || '',
           id: `reminder-${Date.now()}-${Math.random()}`, // Generate unique ID
@@ -336,6 +360,7 @@ export class ReminderServiceImpl implements ReminderService {
           notes: undefined,
           creation_date: this.formatDate(creationDate || ''),
           due_date: dueDate && dueDate.trim() && dueDate !== 'missing value' ? this.formatDate(dueDate) : undefined,
+          alert_date: alertDate && alertDate.trim() && alertDate !== 'missing value' ? this.formatDate(alertDate) : undefined,
           priority: this.mapAppleScriptPriorityToString(parseInt(priority || '0')),
           list_name: listName,
         };
@@ -391,7 +416,13 @@ export class ReminderServiceImpl implements ReminderService {
     this.validateReminderName(params.name);
 
     if (params.due_date && !this.isValidISODate(params.due_date)) {
-      const error = new Error('Invalid date format. Use ISO 8601 format.') as any;
+      const error = new Error('Invalid due_date format. Use ISO 8601 format.') as any;
+      error.code = ErrorCode.INVALID_DATE_FORMAT;
+      throw error;
+    }
+
+    if (params.alert_date && !this.isValidISODate(params.alert_date)) {
+      const error = new Error('Invalid alert_date format. Use ISO 8601 format.') as any;
       error.code = ErrorCode.INVALID_DATE_FORMAT;
       throw error;
     }
@@ -478,8 +509,7 @@ export class ReminderServiceImpl implements ReminderService {
   }
 
   private sanitizeForAppleScript(input: string): string {
-    // Only escape double quotes for AppleScript strings
-    // Single quote escaping is handled by AppleScriptExecutor
+    // With file-based execution, only need to escape double quotes in AppleScript strings
     return input.replace(/"/g, '\\"');
   }
 }
