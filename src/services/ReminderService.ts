@@ -149,9 +149,10 @@ export class ReminderServiceImpl implements ReminderService {
       }
 
       if (params.due_date) {
-        const parsedDate = this.parseISODate(params.due_date);
+        const dateComponents = this.parseISODateToComponents(params.due_date);
         script += `
-        set due date of newReminder to date "${parsedDate}"`;
+        set dueDateTime to (current date) + ${dateComponents.totalSeconds}
+        set due date of newReminder to dueDateTime`;
       }
 
       if (params.priority && params.priority !== 'none') {
@@ -423,9 +424,44 @@ export class ReminderServiceImpl implements ReminderService {
     return isoPattern.test(dateString);
   }
 
+  private parseISODateToComponents(isoDate: string): { totalSeconds: number } {
+    const targetDate = new Date(isoDate);
+    const currentDate = new Date();
+    
+    // Calculate difference in seconds from current time
+    const totalSeconds = Math.floor((targetDate.getTime() - currentDate.getTime()) / 1000);
+    
+    console.error('ISO Date input:', isoDate);
+    console.error('Target date:', targetDate.toString());
+    console.error('Current date:', currentDate.toString());
+    console.error('Seconds difference:', totalSeconds);
+    
+    return { totalSeconds };
+  }
+
   private parseISODate(isoDate: string): string {
     const date = new Date(isoDate);
-    return date.toLocaleString('en-US');
+    
+    // Debug: Log the parsed date
+    console.error('ISO Date input:', isoDate);
+    console.error('Parsed JS Date:', date.toString());
+    
+    // Try simpler format that AppleScript can understand
+    // Format: "7/28/2025 12:00:00 AM" -> "July 28, 2025 12:00:00 AM"
+    const month = date.toLocaleString('en-US', { month: 'long' });
+    const day = date.getDate();
+    const year = date.getFullYear();
+    const timeString = date.toLocaleTimeString('en-US', { 
+      hour12: true,
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    const result = `${month} ${day}, ${year} ${timeString}`;
+    console.error('Formatted for AppleScript:', result);
+    
+    return result;
   }
 
   private formatDate(dateString: string): string {
