@@ -15,6 +15,7 @@ export interface Reminder {
   notes?: string;
   due_date?: string; // ISO 8601 format
   creation_date: string; // ISO 8601 format
+  priority?: string; // 'none', 'low', 'medium', 'high'
   list_name: string;
 }
 
