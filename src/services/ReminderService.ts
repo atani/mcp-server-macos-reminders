@@ -100,7 +100,7 @@ export class ReminderServiceImpl implements ReminderService {
           '    set creationDate to creation date of reminderItem',
           '    if dueDate is missing value then set dueDate to ""',
           '    if reminderPriority is missing value then set reminderPriority to 0',
-          '    set result to result & reminderName & "|||" & dueDate & "|||" & reminderPriority & "|||" & creationDate & "\\n"',
+          '    set outputText to outputText & reminderName & "|||" & dueDate & "|||" & reminderPriority & "|||" & creationDate & "\\n"',
           '  end repeat',
           '  return outputText'
         );
