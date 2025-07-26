@@ -33,22 +33,20 @@ updates:
       include: "scope"
     # Group updates for better PR management
     groups:
-      # Group all production dependencies
+      # Group all production dependencies (minor/patch only)
       production-dependencies:
         dependency-type: "production"
         update-types:
           - "minor"
           - "patch"
-      # Group all development dependencies
+      # Group all development dependencies (minor/patch only)
       development-dependencies:
         dependency-type: "development"
         update-types:
           - "minor"
           - "patch"
-      # Major updates separate for careful review
-      major-updates:
-        update-types:
-          - "major"
+    # Major updates handled individually - no grouping
+    # This prevents bulk major updates that can break builds
     # Ignore specific dependencies
     ignore:
       # Example: Don't update Node.js types beyond current major
