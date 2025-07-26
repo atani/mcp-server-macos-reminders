@@ -35,7 +35,7 @@ export class AppleScriptExecutorImpl implements AppleScriptExecutor {
       return stdout.trim();
     } catch (error) {
       const err = error as any;
-      if (err.code) {
+      if (err.code && typeof err.code === 'string' && Object.values(ErrorCode).includes(err.code as ErrorCode)) {
         // Re-throw our custom errors
         throw err;
       }
@@ -46,6 +46,13 @@ export class AppleScriptExecutorImpl implements AppleScriptExecutor {
           ErrorCode.REMINDERS_APP_NOT_FOUND,
           'osascript command not found. This requires macOS.'
         );
+      }
+
+      // Parse stderr for AppleScript errors
+      if (err.stderr || (err.message && err.message.includes('syntax error'))) {
+        const errorMessage = err.stderr || err.message;
+        const errorCode = this.parseErrorCode(errorMessage);
+        throw this.createError(errorCode, `AppleScript error: ${errorMessage}`);
       }
 
       throw this.createError(
