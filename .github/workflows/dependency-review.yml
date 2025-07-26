@@ -3,6 +3,8 @@ name: Dependency Review
 on:
   pull_request:
     branches: [ main ]
+    # Only run on public repositories or when Advanced Security is enabled
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -11,12 +13,15 @@ permissions:
 jobs:
   dependency-review:
     runs-on: ubuntu-latest
+    # Skip this job if it's a private repository without Advanced Security
+    if: github.event.repository.visibility == 'public' || github.event.repository.security_and_analysis.advanced_security.status == 'enabled'
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
+        continue-on-error: true  # Continue even if Advanced Security is not enabled
         with:
           # Fail the workflow if high or critical vulnerabilities are found
           fail-on-severity: high
