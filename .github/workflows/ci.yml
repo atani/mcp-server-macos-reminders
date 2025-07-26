@@ -36,6 +36,9 @@ jobs:
     - name: Run unit tests
       run: npm run test:unit
 
+    - name: Run cross-platform integration tests
+      run: npm run test:integration
+
     - name: Run test coverage
       run: npm run test:coverage
 

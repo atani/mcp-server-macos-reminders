@@ -15,13 +15,20 @@ describe('AppleScript Integration Tests', () => {
   let executor: AppleScriptExecutorImpl;
   let service: ReminderServiceImpl;
 
-  // Skip these tests in CI or non-macOS environments
+  // Cross-platform test configuration
   const isMacOS = process.platform === 'darwin';
+  const isCI = process.env.CI === 'true';
   const runIntegrationTests = process.env.RUN_INTEGRATION_TESTS === 'true';
+  const shouldRunTests = isMacOS && runIntegrationTests && !isCI;
 
   beforeAll(() => {
     if (!isMacOS) {
       console.log('Skipping AppleScript integration tests - not running on macOS');
+      return;
+    }
+
+    if (isCI) {
+      console.log('Skipping AppleScript integration tests - running in CI environment');
       return;
     }
 
@@ -34,12 +41,12 @@ describe('AppleScript Integration Tests', () => {
     service = new ReminderServiceImpl(executor);
   });
 
-  // Helper function to skip tests when not on macOS or when integration tests are disabled
+  // Helper function to conditionally run tests based on platform and environment
   function itOnMacOS(description: string, testFn: () => Promise<void>, timeout = 30000) {
-    if (isMacOS && runIntegrationTests) {
+    if (shouldRunTests) {
       it(description, testFn, timeout);
     } else {
-      it.skip(description, testFn);
+      it.skip(`[SKIPPED - ${!isMacOS ? 'Non-macOS' : isCI ? 'CI' : 'Integration disabled'}] ${description}`, testFn);
     }
   }
 

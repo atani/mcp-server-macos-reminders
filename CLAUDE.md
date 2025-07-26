@@ -408,24 +408,87 @@ MCPサーバーを使用してリマインダーリストを取得します...
 
 ## テスト仕様
 
-### 単体テスト
+### テスト戦略とプラットフォーム対応
 
-- AppleScript実行エンジンのテスト
+#### クロスプラットフォーム対応の原則
+本プロジェクトはmacOS専用だが、開発・CI/CD環境では複数プラットフォームでの動作が必要。以下の戦略でプラットフォーム依存の問題を解決：
+
+##### 1. テスト分類
+- **単体テスト** (`tests/unit/`): 全プラットフォームで実行可能
+- **クロスプラットフォーム統合テスト** (`tests/integration/cross-platform-safe.test.ts`): プラットフォーム非依存
+- **macOS専用統合テスト** (`tests/integration/applescript-integration.test.ts`): macOS + 権限必要
+
+##### 2. 実行環境による分岐
+```typescript
+// プラットフォーム検出
+const isMacOS = process.platform === 'darwin';
+const isCI = process.env.CI === 'true';
+const runIntegrationTests = process.env.RUN_INTEGRATION_TESTS === 'true';
+const shouldRunTests = isMacOS && runIntegrationTests && !isCI;
+
+// 条件付きテスト実行
+function itOnMacOS(description: string, testFn: () => Promise<void>, timeout = 30000) {
+  if (shouldRunTests) {
+    it(description, testFn, timeout);
+  } else {
+    it.skip(`[SKIPPED - ${!isMacOS ? 'Non-macOS' : isCI ? 'CI' : 'Integration disabled'}] ${description}`, testFn);
+  }
+}
+```
+
+##### 3. CI/CD環境での実行制御
+- **Ubuntu CI**: 単体テスト + クロスプラットフォーム統合テスト
+- **macOS CI**: 基本テストのみ（権限制限のため）
+- **ローカル開発**: 全テスト実行可能（環境変数で制御）
+
+### 単体テスト
+- AppleScript実行エンジンのテスト（モック使用）
 - 各Tool関数の正常系・異常系テスト
 - 入力値バリデーションのテスト
+- 文字列サニタイゼーションのテスト
 
-### 統合テスト
+### クロスプラットフォーム統合テスト
+- パラメータバリデーション
+- エラーハンドリング
+- セキュリティサニタイゼーション
+- 非macOS環境でのエラー処理
 
-- 実際のリマインダーアプリとの連携テスト
-- MCPクライアントからの呼び出しテスト
+### macOS専用統合テスト
+- 実際のAppleScript実行
+- リマインダーアプリとの連携
+- 権限エラーの処理
+- CRUD操作の完全テスト
 
 ### テストコマンド
-
 ```bash
-npm test              # 全テスト実行
-npm run test:unit     # 単体テスト
-npm run test:integration  # 統合テスト
+# 基本テスト（全プラットフォーム対応）
+npm test                    # 単体テスト + クロスプラットフォーム統合テスト
+npm run test:unit          # 単体テストのみ
+npm run test:coverage      # カバレッジ付きテスト
+
+# macOS専用テスト（ローカル開発用）
+RUN_INTEGRATION_TESTS=true npm run test:integration    # macOS統合テスト
+TEST_REMINDER_CRUD=true npm run test:integration       # データ変更テスト含む
+
+# CI用テスト
+npm run test:unit          # CI環境で実行
+npm run test:integration   # macOS以外ではスキップ
 ```
+
+### プラットフォーム対応ガイドライン
+1. **新機能開発時**:
+   - 必ず単体テストを追加（全プラットフォーム対応）
+   - クロスプラットフォーム統合テストでバリデーション確認
+   - macOS専用機能はmacOS専用統合テストに追加
+
+2. **CI/CD失敗時の対処**:
+   - プラットフォーム固有エラーは条件分岐で回避
+   - 環境変数による実行制御を活用
+   - テストスキップ理由を明確に表示
+
+3. **ローカル開発**:
+   - macOS: 全テスト実行可能
+   - 非macOS: 単体テスト + クロスプラットフォーム統合テストのみ
 
 ## 開発・デプロイ手順
 

@@ -344,6 +344,12 @@ export class ReminderServiceImpl implements ReminderService {
       error.code = ErrorCode.INVALID_DATE_FORMAT;
       throw error;
     }
+
+    if (params.priority && !['none', 'low', 'medium', 'high'].includes(params.priority)) {
+      const error = new Error('Invalid priority. Must be one of: none, low, medium, high') as any;
+      error.code = ErrorCode.INVALID_PARAMETER;
+      throw error;
+    }
   }
 
   private isValidISODate(dateString: string): boolean {
