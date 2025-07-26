@@ -109,15 +109,6 @@ export class ReminderServiceImpl implements ReminderService {
       scriptLines.push('end tell');
 
       const script = scriptLines.join('\n');
-      console.error('=== REMINDER SERVICE DEBUG ===');
-      console.error('Method: getReminders');
-      console.error('Input params:', JSON.stringify(params, null, 2));
-      console.error('Sanitized list name:', sanitizedListName);
-      console.error('Generated script lines count:', scriptLines.length);
-      console.error('Generated AppleScript:');
-      console.error(script);
-      console.error('==============================');
-      
       const output = await this.executor.execute(script);
       const reminders = this.parseReminderOutput(output, params.list_name, params.completed);
 
@@ -278,7 +269,6 @@ export class ReminderServiceImpl implements ReminderService {
           
           allReminders.push(...remindersWithList);
         } catch (error) {
-          console.error(`Failed to search in list ${listName}:`, error);
           // Continue with other lists even if one fails
         }
       }
@@ -431,23 +421,13 @@ export class ReminderServiceImpl implements ReminderService {
     // Calculate difference in seconds from current time
     const totalSeconds = Math.floor((targetDate.getTime() - currentDate.getTime()) / 1000);
     
-    console.error('ISO Date input:', isoDate);
-    console.error('Target date:', targetDate.toString());
-    console.error('Current date:', currentDate.toString());
-    console.error('Seconds difference:', totalSeconds);
-    
     return { totalSeconds };
   }
 
   private parseISODate(isoDate: string): string {
     const date = new Date(isoDate);
     
-    // Debug: Log the parsed date
-    console.error('ISO Date input:', isoDate);
-    console.error('Parsed JS Date:', date.toString());
-    
-    // Try simpler format that AppleScript can understand
-    // Format: "7/28/2025 12:00:00 AM" -> "July 28, 2025 12:00:00 AM"
+    // Format for AppleScript: "July 28, 2025 12:00:00 AM"
     const month = date.toLocaleString('en-US', { month: 'long' });
     const day = date.getDate();
     const year = date.getFullYear();
@@ -458,10 +438,7 @@ export class ReminderServiceImpl implements ReminderService {
       second: '2-digit'
     });
     
-    const result = `${month} ${day}, ${year} ${timeString}`;
-    console.error('Formatted for AppleScript:', result);
-    
-    return result;
+    return `${month} ${day}, ${year} ${timeString}`;
   }
 
   private formatDate(dateString: string): string {
