@@ -11,7 +11,7 @@
     "test:coverage": "jest --coverage",
     "test:unit": "jest --testPathPatterns=unit",
     "test:integration": "jest --testPathPatterns=integration",
-    "lint": "eslint src/**/*.ts tests/**/*.ts",
+    "lint": "eslint src/**/*.ts tests/**/*.ts --no-warn-ignored",
     "format": "prettier --write src/**/*.ts tests/**/*.ts *.md *.json"
   },
   "keywords": [
