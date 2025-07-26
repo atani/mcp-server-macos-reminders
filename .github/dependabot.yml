@@ -26,10 +26,10 @@ updates:
     # Assignees for PRs
     assignees:
       - "atani"
-    # Commit message prefix
+    # Commit message prefix (正しいスコープを使用)
     commit-message:
-      prefix: "chore"
-      prefix-development: "chore"
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps)"
       include: "scope"
     # Group updates for better PR management
     groups:
