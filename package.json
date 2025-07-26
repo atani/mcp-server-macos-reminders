@@ -42,7 +42,7 @@
     "@typescript-eslint/parser": "^8.38.0",
     "audit-ci": "^7.1.0",
     "depcheck": "^1.4.3",
-    "eslint": "^8.0.0",
+    "eslint": "^9.32.0",
     "jest": "^30.0.5",
     "power-assert": "^1.6.1",
     "@types/power-assert": "^1.5.0",
