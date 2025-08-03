@@ -33,7 +33,7 @@
   },
   "homepage": "https://github.com/atani/mcp-server-macos-reminders#readme",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.0"
+    "@modelcontextprotocol/sdk": "^1.17.1"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
