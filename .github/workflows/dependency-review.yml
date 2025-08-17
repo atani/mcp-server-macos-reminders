@@ -17,7 +17,7 @@ jobs:
     if: github.event.repository.visibility == 'public' || github.event.repository.security_and_analysis.advanced_security.status == 'enabled'
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
