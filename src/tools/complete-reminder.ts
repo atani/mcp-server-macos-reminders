@@ -3,10 +3,10 @@
  * MCP Tool for marking a reminder as completed
  */
 
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { MCPTool } from '../mcp-types.js';
 import { ReminderService, CompleteReminderParams } from '../types';
 
-export function createCompleteReminderTool(reminderService: ReminderService): Tool {
+export function createCompleteReminderTool(reminderService: ReminderService): MCPTool {
   return {
     name: 'complete_reminder',
     description: 'Mark a reminder as completed',

@@ -3,10 +3,10 @@
  * MCP Tool for retrieving reminders from a specific list
  */
 
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { MCPTool } from '../mcp-types.js';
 import { ReminderService, GetRemindersParams } from '../types';
 
-export function createGetRemindersTool(reminderService: ReminderService): Tool {
+export function createGetRemindersTool(reminderService: ReminderService): MCPTool {
   return {
     name: 'get_reminders',
     description: 'Get reminders from a specific list',

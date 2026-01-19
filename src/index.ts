@@ -9,11 +9,13 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   CallToolRequestSchema,
-  ErrorCode,
   ListResourcesRequestSchema,
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+
+// Import internal types
+import { MCPTool, MCPResource } from './mcp-types.js';
 
 // Import implementations
 import { AppleScriptExecutorImpl } from './applescript/executor.js';
@@ -30,33 +32,6 @@ import { createSearchRemindersTool } from './tools/search-reminders.js';
 // Import resources
 import { createRemindersListsResource } from './resources/lists.js';
 import { createReminderListDetailResource } from './resources/list-detail.js';
-
-// Tool and Resource interfaces
-interface MCPTool {
-  name: string;
-  description: string;
-  inputSchema: any;
-  handler: (args: Record<string, unknown>) => Promise<{
-    content: Array<{
-      type: string;
-      text: string;
-    }>;
-  }>;
-}
-
-interface MCPResource {
-  uri: string;
-  name: string;
-  description: string;
-  mimeType: string;
-  handler: (uri: string) => Promise<{
-    contents: Array<{
-      uri: string;
-      mimeType: string;
-      text: string;
-    }>;
-  }>;
-}
 
 /**
  * Create and configure MCP server
@@ -105,10 +80,10 @@ async function main() {
     })),
   }));
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler(CallToolRequestSchema, async (request): Promise<any> => {
     const { name, arguments: args } = request.params;
-    
-    const tool = tools.find(t => t.name === name) as unknown as MCPTool;
+
+    const tool = tools.find(t => t.name === name);
     if (!tool) {
       throw new Error(`Unknown tool: ${name}`);
     }
@@ -131,12 +106,12 @@ async function main() {
     })),
   }));
 
-  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  server.setRequestHandler(ReadResourceRequestSchema, async (request): Promise<any> => {
     const { uri } = request.params;
-    
+
     // Find matching resource
-    let matchingResource = resources.find(r => r.uri === uri) as unknown as MCPResource;
-    
+    let matchingResource = resources.find(r => r.uri === uri);
+
     // Handle parameterized URIs like reminders://list/{list_name}
     if (!matchingResource) {
       matchingResource = resources.find(r => {
@@ -146,9 +121,9 @@ async function main() {
           return regex.test(uri);
         }
         return false;
-      }) as unknown as MCPResource;
+      });
     }
-    
+
     if (!matchingResource) {
       throw new Error(`Unknown resource: ${uri}`);
     }

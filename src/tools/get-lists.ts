@@ -3,10 +3,10 @@
  * MCP Tool for retrieving all reminder lists
  */
 
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { MCPTool } from '../mcp-types.js';
 import { ReminderService } from '../types';
 
-export function createGetReminderListsTool(reminderService: ReminderService): Tool {
+export function createGetReminderListsTool(reminderService: ReminderService): MCPTool {
   return {
     name: 'get_reminder_lists',
     description: 'Get all reminder lists from macOS Reminders app',

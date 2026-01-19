@@ -3,10 +3,10 @@
  * MCP Tool for searching reminders by keyword
  */
 
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { MCPTool } from '../mcp-types.js';
 import { ReminderService, SearchRemindersParams } from '../types';
 
-export function createSearchRemindersTool(reminderService: ReminderService): Tool {
+export function createSearchRemindersTool(reminderService: ReminderService): MCPTool {
   return {
     name: 'search_reminders',
     description: 'Search reminders by keyword across all lists or within a specific list',
