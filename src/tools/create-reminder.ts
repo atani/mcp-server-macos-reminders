@@ -3,10 +3,10 @@
  * MCP Tool for creating a new reminder
  */
 
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { MCPTool } from '../mcp-types.js';
 import { ReminderService, CreateReminderParams } from '../types';
 
-export function createCreateReminderTool(reminderService: ReminderService): Tool {
+export function createCreateReminderTool(reminderService: ReminderService): MCPTool {
   return {
     name: 'create_reminder',
     description: 'Create a new reminder in the specified list',

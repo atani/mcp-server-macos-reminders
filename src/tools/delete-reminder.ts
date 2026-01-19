@@ -3,10 +3,10 @@
  * MCP Tool for deleting a reminder
  */
 
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { MCPTool } from '../mcp-types.js';
 import { ReminderService, DeleteReminderParams } from '../types';
 
-export function createDeleteReminderTool(reminderService: ReminderService): Tool {
+export function createDeleteReminderTool(reminderService: ReminderService): MCPTool {
   return {
     name: 'delete_reminder',
     description: 'Delete a reminder from the specified list',

@@ -3,10 +3,10 @@
  * MCP Resource for providing all reminder lists information
  */
 
-import { Resource } from '@modelcontextprotocol/sdk/types.js';
+import { MCPResource } from '../mcp-types.js';
 import { ReminderService } from '../types';
 
-export function createRemindersListsResource(reminderService: ReminderService): Resource {
+export function createRemindersListsResource(reminderService: ReminderService): MCPResource {
   return {
     uri: 'reminders://lists',
     name: 'All Reminder Lists',
