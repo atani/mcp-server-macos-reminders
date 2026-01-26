@@ -1,6 +1,6 @@
 {
   "name": "mcp-server-macos-reminders",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "MCP Server for macOS Reminders app integration with Claude Code",
   "main": "dist/index.js",
   "scripts": {
@@ -54,11 +54,27 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "roots": ["<rootDir>/src", "<rootDir>/tests"],
-    "testMatch": ["**/__tests__/**/*.ts", "**/?(*.)+(spec|test).ts"],
-    "collectCoverageFrom": ["src/**/*.ts", "!src/**/*.d.ts", "!src/index.ts"],
+    "roots": [
+      "<rootDir>/src",
+      "<rootDir>/tests"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.ts",
+      "**/?(*.)+(spec|test).ts"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.ts",
+      "!src/**/*.d.ts",
+      "!src/index.ts"
+    ],
     "coverageDirectory": "coverage",
-    "coverageReporters": ["text", "lcov", "html"],
-    "setupFilesAfterEnv": ["<rootDir>/tests/setup.ts"]
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.ts"
+    ]
   }
 }
