@@ -27,6 +27,7 @@ jobs:
     if: |
       github.event.pull_request && (
         github.event.pull_request.user.login == 'dependabot[bot]' ||
+        github.event.pull_request.user.login == 'app/dependabot' ||
         github.event.pull_request.user.login == 'renovate[bot]' ||
         github.event.pull_request.user.login == 'renovate-bot'
       )
@@ -129,6 +130,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       (github.event.pull_request.user.login == 'dependabot[bot]' ||
+        github.event.pull_request.user.login == 'app/dependabot' ||
        github.event.pull_request.user.login == 'renovate[bot]') &&
       contains(github.event.pull_request.labels.*.name, 'security')
     
