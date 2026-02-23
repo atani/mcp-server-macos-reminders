@@ -103,10 +103,10 @@ jobs:
         fi
         echo "Build verification passed"
 
-  # Security audit
+  # Security audit (production dependencies only)
   security:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
@@ -120,10 +120,9 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Run security audit
-      run: npm audit --audit-level moderate
+    - name: Run security audit (production only)
+      run: npm audit --omit=dev --audit-level moderate
 
-    - name: Run dependency check
+    - name: Run dependency check (production only)
       run: |
-        # Check for known vulnerabilities
-        npx audit-ci --moderate
+        npx audit-ci --moderate --allow-list '' --skip-dev

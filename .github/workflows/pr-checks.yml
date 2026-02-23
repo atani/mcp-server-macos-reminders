@@ -195,10 +195,10 @@ jobs:
   auto-fix-deps:
     runs-on: ubuntu-latest
     if: |
-      (github.event.pull_request.user.login == 'dependabot[bot]' ||
-       github.event.pull_request.user.login == 'renovate[bot]' ||
-       github.event.pull_request.user.login == 'renovate-bot') &&
-      contains(github.event.pull_request.labels.*.name, 'dependencies')
+      github.event.pull_request.user.login == 'dependabot[bot]' ||
+      github.event.pull_request.user.login == 'app/dependabot' ||
+      github.event.pull_request.user.login == 'renovate[bot]' ||
+      github.event.pull_request.user.login == 'renovate-bot'
     permissions:
       contents: write
       pull-requests: write
@@ -215,24 +215,30 @@ jobs:
         node-version: '20.x'
         cache: 'npm'
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Check peer dependency compatibility
+      id: peer-check
+      run: |
+        if ! npm ci 2>&1 | tee /tmp/npm-ci-output.txt; then
+          if grep -q "ERESOLVE" /tmp/npm-ci-output.txt; then
+            echo "peer_conflict=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Peer dependency conflict detected. This PR may require manual intervention."
+          else
+            echo "peer_conflict=false" >> "$GITHUB_OUTPUT"
+          fi
+        else
+          echo "peer_conflict=false" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Auto-fix common issues
+      if: steps.peer-check.outputs.peer_conflict != 'true'
       run: |
-        # Fix linting issues
         npm run lint -- --fix || true
-        
-        # Fix formatting issues
         npm run format || true
-        
-        # Rebuild if needed
         npm run build || true
-        
-        # Update snapshots if tests use them
         npm test -- -u || true
 
     - name: Commit fixes if needed
+      if: steps.peer-check.outputs.peer_conflict != 'true'
       run: |
         if [[ -n $(git status --porcelain) ]]; then
           git config --global user.name 'github-actions[bot]'
@@ -243,9 +249,29 @@ jobs:
           - Fix linting errors
           - Apply code formatting
           - Update any affected snapshots
-          
+
           Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
           git push
         else
           echo "No fixes needed"
         fi
+
+    - name: Close incompatible PR
+      if: steps.peer-check.outputs.peer_conflict == 'true'
+      uses: actions/github-script@v8
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const pr = context.payload.pull_request;
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: pr.number,
+            body: `This dependency update has peer dependency conflicts and cannot be automatically merged.\n\nPlease update related dependencies together or wait for compatible versions.\n\n<details><summary>Error details</summary>\n\n\`\`\`\n${require('fs').readFileSync('/tmp/npm-ci-output.txt', 'utf8').slice(-2000)}\n\`\`\`\n</details>`
+          });
+          await github.rest.pulls.update({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: pr.number,
+            state: 'closed'
+          });
