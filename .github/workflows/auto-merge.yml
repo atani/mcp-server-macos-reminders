@@ -45,35 +45,50 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const pr = context.payload.pull_request;
-            
+
             // Get PR details
             const { data: pullRequest } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: pr.number
             });
-            
-            // Check if all checks have passed
+
+            // Check if all required checks have passed
             const { data: checkRuns } = await github.rest.checks.listForRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: pullRequest.head.sha
             });
-            
-            const allChecksPassed = checkRuns.check_runs.every(
-              check => check.status === 'completed' && check.conclusion === 'success'
+
+            // Exclude our own workflow checks and skipped checks
+            const selfWorkflows = ['auto-merge', 'auto-merge-security', 'auto-fix-deps', 'repair'];
+            const relevantChecks = checkRuns.check_runs.filter(
+              check => !selfWorkflows.includes(check.name) && check.conclusion !== 'skipped'
             );
-            
-            // Check if PR is mergeable
-            const isMergeable = pullRequest.mergeable_state === 'clean';
-            
+
+            const allChecksPassed = relevantChecks.every(
+              check => check.status === 'completed' &&
+                (check.conclusion === 'success' || check.conclusion === 'neutral')
+            );
+
+            const pendingChecks = relevantChecks.filter(c => c.status !== 'completed');
+            if (pendingChecks.length > 0) {
+              console.log(`Pending checks: ${pendingChecks.map(c => c.name).join(', ')}`);
+              core.setOutput('canMerge', false);
+              return;
+            }
+
+            const failedChecks = relevantChecks.filter(
+              c => c.conclusion !== 'success' && c.conclusion !== 'neutral'
+            );
+            if (failedChecks.length > 0) {
+              console.log(`Failed checks: ${failedChecks.map(c => `${c.name}: ${c.conclusion}`).join(', ')}`);
+            }
+
             console.log(`All checks passed: ${allChecksPassed}`);
-            console.log(`PR is mergeable: ${isMergeable}`);
-            
-            return {
-              canMerge: allChecksPassed && isMergeable,
-              prNumber: pr.number
-            };
+            console.log(`PR mergeable_state: ${pullRequest.mergeable_state}`);
+
+            core.setOutput('canMerge', allChecksPassed && pullRequest.mergeable_state === 'clean');
 
       - name: Auto-approve PR
         if: steps.pr-status.outputs.canMerge == 'true'
@@ -81,7 +96,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Enable auto-merge
+      - name: Merge PR
         if: steps.pr-status.outputs.canMerge == 'true'
         uses: actions/github-script@v8
         with:
