@@ -5,11 +5,13 @@
 ## 📦 使用ツール
 
 ### 1. **Dependabot** (基本的な更新)
+
 - GitHubネイティブの依存関係更新ツール
 - 週次でnpmパッケージとGitHub Actionsを更新
 - セキュリティ脆弱性の自動検出と修正
 
 ### 2. **Renovate** (高度な更新管理)
+
 - より高度な設定が可能な依存関係管理ツール
 - パッケージのグループ化と自動マージ設定
 - 更新の安定性チェック（3日間の待機期間）
@@ -40,20 +42,22 @@
 ## 📋 設定ファイル
 
 ### `.github/dependabot.yml`
+
 ```yaml
 version: 2
 updates:
-  - package-ecosystem: "npm"
+  - package-ecosystem: 'npm'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     groups:
       production-dependencies:
-        dependency-type: "production"
+        dependency-type: 'production'
       development-dependencies:
-        dependency-type: "development"
+        dependency-type: 'development'
 ```
 
 ### `.github/renovate.json`
+
 ```json
 {
   "extends": ["config:recommended"],
@@ -71,16 +75,19 @@ updates:
 ## 🚀 GitHub Actions ワークフロー
 
 ### 1. **Auto Merge** (`.github/workflows/auto-merge.yml`)
+
 - Dependabot/RenovateのPRを自動マージ
 - 全テスト通過とマージ可能状態をチェック
 - セキュリティ更新の優先処理
 
 ### 2. **Dependency Review** (`.github/workflows/dependency-review.yml`)
+
 - ライセンスチェック（許可: MIT, Apache-2.0等）
 - 脆弱性スキャン
 - Breaking changesの検出と警告
 
 ### 3. **PR Checks - Auto Fix** (`.github/workflows/pr-checks.yml`)
+
 - リンティングエラーの自動修正
 - コードフォーマットの自動適用
 - 修正内容の自動コミット
@@ -88,11 +95,13 @@ updates:
 ## 🛡️ セキュリティ設定
 
 ### 脆弱性対応
+
 - **高・重大**: 即座にPR作成、優先マージ
 - **中程度**: 通常の更新フローで処理
 - **低**: バッチ更新で処理
 
 ### ライセンス管理
+
 - **許可**: MIT, Apache-2.0, BSD, ISC
 - **拒否**: GPL-3.0, AGPL-3.0
 - 新しいライセンスは手動レビュー必須
@@ -100,6 +109,7 @@ updates:
 ## 📊 ダッシュボード
 
 Renovateは依存関係更新ダッシュボードを提供：
+
 - 保留中の更新一覧
 - 更新のグループ化状況
 - ブロックされている更新の理由
