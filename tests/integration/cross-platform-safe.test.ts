@@ -191,8 +191,8 @@ describe('Cross-Platform Integration Tests', () => {
           const err = error as any;
           // Should get either command not found or reminders app not found
           assert(
-            err.code === ErrorCode.REMINDERS_APP_NOT_FOUND || 
-            err.code === ErrorCode.APPLESCRIPT_ERROR
+            err.code === ErrorCode.REMINDERS_APP_NOT_FOUND ||
+              err.code === ErrorCode.APPLESCRIPT_ERROR
           );
         }
       } else {
@@ -205,22 +205,22 @@ describe('Cross-Platform Integration Tests', () => {
 
 /**
  * Cross-Platform Test Design Principles
- * 
+ *
  * 1. Separation of Concerns:
  *    - Platform-specific tests in applescript-integration.test.ts
  *    - Platform-independent tests in this file
- * 
+ *
  * 2. Test Categories:
  *    - Input validation (works on all platforms)
  *    - String sanitization (pure functions)
  *    - Parameter validation (business logic)
  *    - Error handling (predictable responses)
- * 
+ *
  * 3. CI/CD Strategy:
  *    - These tests run on all platforms in CI
  *    - macOS-specific tests only run locally with explicit opt-in
  *    - No external dependencies or system calls
- * 
+ *
  * 4. Maintainability:
  *    - Tests that don't require actual AppleScript execution
  *    - Focus on the TypeScript/Node.js logic

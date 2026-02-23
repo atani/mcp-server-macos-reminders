@@ -31,7 +31,7 @@ export class AppleScriptExecutorImpl implements AppleScriptExecutor {
     try {
       // Write script to temporary file with UTF-8 encoding
       writeFileSync(tempFilePath, script, 'utf8');
-      
+
       const { stdout, stderr } = await execAsync(`osascript "${tempFilePath}"`);
 
       if (stderr) {
@@ -43,7 +43,11 @@ export class AppleScriptExecutorImpl implements AppleScriptExecutor {
       return stdout.trim();
     } catch (error) {
       const err = error as any;
-      if (err.code && typeof err.code === 'string' && Object.values(ErrorCode).includes(err.code as ErrorCode)) {
+      if (
+        err.code &&
+        typeof err.code === 'string' &&
+        Object.values(ErrorCode).includes(err.code as ErrorCode)
+      ) {
         // Re-throw our custom errors
         throw err;
       }

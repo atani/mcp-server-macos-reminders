@@ -46,7 +46,10 @@ describe('AppleScript Integration Tests', () => {
     if (shouldRunTests) {
       it(description, testFn, timeout);
     } else {
-      it.skip(`[SKIPPED - ${!isMacOS ? 'Non-macOS' : isCI ? 'CI' : 'Integration disabled'}] ${description}`, testFn);
+      it.skip(
+        `[SKIPPED - ${!isMacOS ? 'Non-macOS' : isCI ? 'CI' : 'Integration disabled'}] ${description}`,
+        testFn
+      );
     }
   }
 
@@ -253,7 +256,11 @@ describe('AppleScript Integration Tests', () => {
         const err = error as any;
         // Should get LIST_NOT_FOUND or similar error
         // Should get an error code indicating the operation failed
-        assert(err.code === ErrorCode.LIST_NOT_FOUND || err.code === ErrorCode.APPLESCRIPT_ERROR || typeof err.code === 'string');
+        assert(
+          err.code === ErrorCode.LIST_NOT_FOUND ||
+            err.code === ErrorCode.APPLESCRIPT_ERROR ||
+            typeof err.code === 'string'
+        );
         console.log('Error code received:', err.code);
       }
     });
