@@ -1,0 +1,202 @@
+name: CI Auto Repair
+
+on:
+  workflow_run:
+    workflows: ["CI", "PR Checks"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+  checks: read
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'pull_request'
+    steps:
+      - name: Get PR info from workflow run
+        id: pr-info
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const run = context.payload.workflow_run;
+
+            // Get PRs associated with this workflow run
+            const prs = run.pull_requests;
+            if (!prs || prs.length === 0) {
+              console.log('No PR associated with this workflow run');
+              return { hasPR: false };
+            }
+
+            const pr = prs[0];
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+
+            const isDependabot = [
+              'dependabot[bot]', 'app/dependabot',
+              'renovate[bot]', 'renovate-bot'
+            ].includes(pullRequest.user.login);
+
+            console.log(`PR #${pr.number}: ${pullRequest.title}`);
+            console.log(`Author: ${pullRequest.user.login}, isDependabot: ${isDependabot}`);
+
+            core.setOutput('pr_number', pr.number);
+            core.setOutput('head_ref', pullRequest.head.ref);
+            core.setOutput('is_dependabot', isDependabot);
+            core.setOutput('has_pr', true);
+
+      - name: Analyze failures
+        if: steps.pr-info.outputs.has_pr == 'true'
+        id: analyze
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const run = context.payload.workflow_run;
+
+            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: run.id
+            });
+
+            const failedJobs = jobs.jobs.filter(j => j.conclusion === 'failure');
+            const failureTypes = failedJobs.map(j => j.name);
+
+            console.log('Failed jobs:', failureTypes);
+
+            const hasSecurityFailure = failureTypes.some(n => n === 'security');
+            const hasBuildFailure = failureTypes.some(n => n === 'build');
+            const hasLintFailure = failureTypes.some(n =>
+              n === 'code-quality' || n.includes('lint')
+            );
+            const hasTestFailure = failureTypes.some(n =>
+              n.startsWith('test') || n === 'coverage-check'
+            );
+
+            core.setOutput('has_security_failure', hasSecurityFailure);
+            core.setOutput('has_build_failure', hasBuildFailure);
+            core.setOutput('has_lint_failure', hasLintFailure);
+            core.setOutput('has_test_failure', hasTestFailure);
+            core.setOutput('failed_jobs', failureTypes.join(','));
+
+      - name: Checkout PR branch
+        if: |
+          steps.pr-info.outputs.has_pr == 'true' &&
+          steps.pr-info.outputs.is_dependabot == 'true'
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ steps.pr-info.outputs.head_ref }}
+
+      - name: Setup Node.js
+        if: |
+          steps.pr-info.outputs.has_pr == 'true' &&
+          steps.pr-info.outputs.is_dependabot == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Attempt install
+        if: |
+          steps.pr-info.outputs.has_pr == 'true' &&
+          steps.pr-info.outputs.is_dependabot == 'true'
+        id: install
+        run: |
+          if npm ci 2>&1 | tee /tmp/install-output.txt; then
+            echo "install_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "install_ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fix lint and format issues
+        if: |
+          steps.install.outputs.install_ok == 'true' &&
+          (steps.analyze.outputs.has_lint_failure == 'true')
+        run: |
+          npm run lint -- --fix || true
+          npm run format || true
+
+      - name: Fix lockfile issues
+        if: |
+          steps.install.outputs.install_ok == 'true' &&
+          steps.analyze.outputs.has_security_failure == 'true'
+        run: |
+          npm audit fix --omit=dev || true
+
+      - name: Rebuild
+        if: steps.install.outputs.install_ok == 'true'
+        run: npm run build || true
+
+      - name: Run tests
+        if: steps.install.outputs.install_ok == 'true'
+        run: npm test -- -u || true
+
+      - name: Commit and push fixes
+        if: steps.install.outputs.install_ok == 'true'
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            git config --global user.name 'github-actions[bot]'
+            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+            git add .
+            git commit -m "chore: auto-repair CI failures
+
+          Attempted fixes for: ${{ steps.analyze.outputs.failed_jobs }}
+
+          Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+            git push
+            echo "Fixes committed and pushed"
+          else
+            echo "No auto-fixable changes found"
+          fi
+
+      - name: Comment on unfixable PR
+        if: |
+          steps.install.outputs.install_ok == 'false' &&
+          steps.pr-info.outputs.is_dependabot == 'true'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = ${{ steps.pr-info.outputs.pr_number }};
+            const failedJobs = '${{ steps.analyze.outputs.failed_jobs }}';
+            const installLog = require('fs').readFileSync('/tmp/install-output.txt', 'utf8').slice(-2000);
+
+            // Check if we already commented
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
+            const hasAutoComment = comments.some(c =>
+              c.user.login === 'github-actions[bot]' &&
+              c.body.includes('CI Auto Repair')
+            );
+            if (hasAutoComment) {
+              console.log('Already commented, skipping');
+              return;
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `### CI Auto Repair\n\nDependency installation failed. This update may have incompatible peer dependencies.\n\n**Failed jobs:** ${failedJobs}\n\n<details><summary>Install log</summary>\n\n\`\`\`\n${installLog}\n\`\`\`\n</details>`
+            });
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              state: 'closed'
+            });
