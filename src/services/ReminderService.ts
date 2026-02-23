@@ -48,11 +48,11 @@ export class ReminderServiceImpl implements ReminderService {
 
     try {
       const sanitizedListName = this.sanitizeForAppleScript(params.list_name);
-      
+
       // Build script based on completion filter
       const scriptLines = [
         'tell application "Reminders"',
-        `  set reminderList to list "${sanitizedListName}"`
+        `  set reminderList to list "${sanitizedListName}"`,
       ];
 
       if (params.completed === false) {
@@ -133,7 +133,7 @@ export class ReminderServiceImpl implements ReminderService {
     try {
       const sanitizedListName = this.sanitizeForAppleScript(params.list_name);
       const sanitizedName = this.sanitizeForAppleScript(params.name);
-      
+
       let script = `tell application "Reminders"
         set reminderList to list "${sanitizedListName}"
         set newReminder to make new reminder at end of reminderList
@@ -177,7 +177,8 @@ export class ReminderServiceImpl implements ReminderService {
         const alertTime = new Date(params.alert_date).getTime();
         const dueTime = new Date(params.due_date).getTime();
         if (alertTime < dueTime) {
-          warningMessage = '現在のAPIでは早期リマインダー（期日より前のアラート）の設定はサポートされていないようで、アラートは期日と同じ時刻に設定されています。早期リマインダーの設定は、リマインダーアプリで直接設定していただく必要があります。';
+          warningMessage =
+            '現在のAPIでは早期リマインダー（期日より前のアラート）の設定はサポートされていないようで、アラートは期日と同じ時刻に設定されています。早期リマインダーの設定は、リマインダーアプリで直接設定していただく必要があります。';
         }
       }
 
@@ -208,7 +209,7 @@ export class ReminderServiceImpl implements ReminderService {
     try {
       const sanitizedListName = this.sanitizeForAppleScript(params.list_name);
       const sanitizedReminderName = this.sanitizeForAppleScript(params.reminder_name);
-      
+
       const script = `tell application "Reminders"
         set reminderList to list "${sanitizedListName}"
         set targetReminder to first reminder in reminderList whose name is "${sanitizedReminderName}"
@@ -240,7 +241,7 @@ export class ReminderServiceImpl implements ReminderService {
     try {
       const sanitizedListName = this.sanitizeForAppleScript(params.list_name);
       const sanitizedReminderName = this.sanitizeForAppleScript(params.reminder_name);
-      
+
       const script = `tell application "Reminders"
         set reminderList to list "${sanitizedListName}"
         set targetReminder to first reminder in reminderList whose name is "${sanitizedReminderName}"
@@ -282,15 +283,15 @@ export class ReminderServiceImpl implements ReminderService {
         try {
           const listResult = await this.searchInSpecificList({
             ...params,
-            list_name: listName
+            list_name: listName,
           });
-          
+
           // Add list name to each reminder
-          const remindersWithList = listResult.reminders.map(reminder => ({
+          const remindersWithList = listResult.reminders.map((reminder) => ({
             ...reminder,
-            list_name: listName
+            list_name: listName,
           }));
-          
+
           allReminders.push(...remindersWithList);
         } catch (error) {
           // Continue with other lists even if one fails
@@ -303,9 +304,11 @@ export class ReminderServiceImpl implements ReminderService {
     }
   }
 
-  private async searchInSpecificList(params: SearchRemindersParams): Promise<SearchRemindersResult> {
+  private async searchInSpecificList(
+    params: SearchRemindersParams
+  ): Promise<SearchRemindersResult> {
     const sanitizedListName = this.sanitizeForAppleScript(params.list_name!);
-    
+
     const script = `tell application "Reminders"
       set targetList to list "${sanitizedListName}"
       set reminderNames to name of every reminder in targetList
@@ -313,14 +316,14 @@ export class ReminderServiceImpl implements ReminderService {
     end tell`;
 
     const output = await this.executor.execute(script);
-    
+
     // Parse comma-separated list
-    const reminderNames = output.split(', ').filter(name => name.trim());
-    
+    const reminderNames = output.split(', ').filter((name) => name.trim());
+
     // Filter by query and convert to Reminder objects
     const filteredReminders = reminderNames
-      .filter(name => name.includes(params.query))
-      .map(name => ({
+      .filter((name) => name.includes(params.query))
+      .map((name) => ({
         name: name.trim(),
         id: `reminder-${Date.now()}-${Math.random()}`,
         completed: false, // Cannot determine in simple mode
@@ -344,7 +347,11 @@ export class ReminderServiceImpl implements ReminderService {
     }));
   }
 
-  private parseReminderOutput(output: string, listName: string, expectedCompleted?: boolean): Reminder[] {
+  private parseReminderOutput(
+    output: string,
+    listName: string,
+    expectedCompleted?: boolean
+  ): Reminder[] {
     if (!output.trim()) return [];
 
     // Handle detailed reminder data with |||separators
@@ -359,8 +366,14 @@ export class ReminderServiceImpl implements ReminderService {
           completed: expectedCompleted !== undefined ? expectedCompleted : false,
           notes: undefined,
           creation_date: this.formatDate(creationDate || ''),
-          due_date: dueDate && dueDate.trim() && dueDate !== 'missing value' ? this.formatDate(dueDate) : undefined,
-          alert_date: alertDate && alertDate.trim() && alertDate !== 'missing value' ? this.formatDate(alertDate) : undefined,
+          due_date:
+            dueDate && dueDate.trim() && dueDate !== 'missing value'
+              ? this.formatDate(dueDate)
+              : undefined,
+          alert_date:
+            alertDate && alertDate.trim() && alertDate !== 'missing value'
+              ? this.formatDate(alertDate)
+              : undefined,
           priority: this.mapAppleScriptPriorityToString(parseInt(priority || '0')),
           list_name: listName,
         };
@@ -439,7 +452,7 @@ export class ReminderServiceImpl implements ReminderService {
     if (isNaN(date.getTime())) {
       return false;
     }
-    
+
     // Check if it matches ISO 8601 format patterns including timezone offsets
     const isoPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?(Z|[+-]\d{2}:\d{2})$/;
     return isoPattern.test(dateString);
@@ -448,27 +461,27 @@ export class ReminderServiceImpl implements ReminderService {
   private parseISODateToComponents(isoDate: string): { totalSeconds: number } {
     const targetDate = new Date(isoDate);
     const currentDate = new Date();
-    
+
     // Calculate difference in seconds from current time
     const totalSeconds = Math.floor((targetDate.getTime() - currentDate.getTime()) / 1000);
-    
+
     return { totalSeconds };
   }
 
   private parseISODate(isoDate: string): string {
     const date = new Date(isoDate);
-    
+
     // Format for AppleScript: "July 28, 2025 12:00:00 AM"
     const month = date.toLocaleString('en-US', { month: 'long' });
     const day = date.getDate();
     const year = date.getFullYear();
-    const timeString = date.toLocaleTimeString('en-US', { 
+    const timeString = date.toLocaleTimeString('en-US', {
       hour12: true,
       hour: 'numeric',
       minute: '2-digit',
-      second: '2-digit'
+      second: '2-digit',
     });
-    
+
     return `${month} ${day}, ${year} ${timeString}`;
   }
 

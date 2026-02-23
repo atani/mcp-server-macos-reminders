@@ -13,11 +13,13 @@
 ### 1. リポジトリで自動マージを有効化
 
 #### GitHub CLIを使用
+
 ```bash
 gh repo edit atani/mcp-server-macos-reminders --enable-auto-merge
 ```
 
 #### GitHub Web UIを使用
+
 1. リポジトリの **Settings** タブを開く
 2. 左サイドバーの **General** をクリック
 3. **Pull Requests** セクションまでスクロール
@@ -68,6 +70,7 @@ gh repo edit atani/mcp-server-macos-reminders --enable-auto-merge
 自動マージは PR ごとに有効化する必要があります：
 
 #### GitHub CLIを使用
+
 ```bash
 # PR番号を指定して自動マージを有効化
 gh pr merge 1 --auto --squash --repo atani/mcp-server-macos-reminders
@@ -76,6 +79,7 @@ gh pr merge 3 --auto --squash --repo atani/mcp-server-macos-reminders
 ```
 
 #### GitHub Web UIを使用
+
 1. PRページを開く
 2. 下部の **Enable auto-merge** ボタンをクリック
 3. マージ方法を選択（Squash and merge 推奨）
@@ -100,11 +104,13 @@ gh pr merge 3 --auto --squash --repo atani/mcp-server-macos-reminders
 ### 自動マージが実行されない場合
 
 1. **PR の状態を確認**
+
    ```bash
    gh pr view 1 --json autoMergeRequest
    ```
 
 2. **マージ可能状態を確認**
+
    ```bash
    gh pr view 1 --json mergeable,mergeStateStatus
    ```
