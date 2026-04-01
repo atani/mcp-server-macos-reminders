@@ -21,7 +21,7 @@ jobs:
     steps:
       - name: Find dependabot PRs from workflow run
         id: find-pr
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -61,7 +61,7 @@ jobs:
       - name: Check all CI status
         if: steps.find-pr.outputs.found == 'true'
         id: check-status
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -113,14 +113,14 @@ jobs:
 
       - name: Auto-approve PR
         if: steps.check-status.outputs.ready == 'true'
-        uses: hmarr/auto-approve-action@v4
+        uses: hmarr/auto-approve-action@8f929096a962e83ccdfa8afcf855f39f12d4dac7 # v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           pull-request-number: ${{ steps.find-pr.outputs.pr_number }}
 
       - name: Merge PR
         if: steps.check-status.outputs.ready == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
