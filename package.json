@@ -38,15 +38,15 @@
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^25.6.0",
-    "@typescript-eslint/eslint-plugin": "^8.58.1",
+    "@typescript-eslint/eslint-plugin": "^8.58.2",
     "@typescript-eslint/parser": "^8.38.0",
     "audit-ci": "^7.1.0",
     "depcheck": "^1.4.3",
-    "eslint": "^10.2.0",
+    "eslint": "^10.2.1",
     "jest": "^30.3.0",
     "power-assert": "^1.6.1",
     "@types/power-assert": "^1.5.0",
-    "prettier": "^3.8.2",
+    "prettier": "^3.8.3",
     "ts-jest": "^29.4.9",
     "ts-node": "^10.9.0",
     "typescript": "^5.9.3"
