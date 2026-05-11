@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.4](https://github.com/atani/mcp-server-macos-reminders/compare/v1.0.3...v1.0.4) (2026-05-11)
+
+
+### Bug Fixes
+
+* **ci:** auto-fix CI failure ([#109](https://github.com/atani/mcp-server-macos-reminders/issues/109)) ([fc12b3b](https://github.com/atani/mcp-server-macos-reminders/commit/fc12b3b68900b4920ab2f6518e0a763dfba47591))
+* **ci:** auto-fix Dependabot Updates failure ([#123](https://github.com/atani/mcp-server-macos-reminders/issues/123)) ([b364bae](https://github.com/atani/mcp-server-macos-reminders/commit/b364baeb193c9a7dfa1d8f0e9e6a8aa7d0f057a7))
+* **ci:** skip auto-repair on closed PRs ([#121](https://github.com/atani/mcp-server-macos-reminders/issues/121)) ([5bd0d51](https://github.com/atani/mcp-server-macos-reminders/commit/5bd0d51dfe092ce1009c82186c14b74cb60a75d8))
+
 ## [1.0.3](https://github.com/atani/mcp-server-macos-reminders/compare/v1.0.2...v1.0.3) (2026-04-06)
 
 ### Bug Fixes
