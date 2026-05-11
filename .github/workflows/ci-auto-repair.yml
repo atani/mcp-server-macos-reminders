@@ -41,6 +41,12 @@ jobs:
               pull_number: pr.number
             });
 
+            if (pullRequest.state !== 'open') {
+              console.log(`PR #${pr.number} is ${pullRequest.state}; skipping auto-repair`);
+              core.setOutput('has_pr', false);
+              return;
+            }
+
             const isDependabot = [
               'dependabot[bot]', 'app/dependabot',
               'renovate[bot]', 'renovate-bot'
