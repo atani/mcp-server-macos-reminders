@@ -53,6 +53,11 @@ updates:
       # Example: Don't update Node.js types beyond current major
       - dependency-name: "@types/node"
         versions: ["21.x", "22.x", "23.x"]
+      # Dependabot security runs are currently false-positive for these packages:
+      # the lockfile is already on a fixed version, but the updater exits with
+      # security_update_not_needed and marks the workflow failed.
+      - dependency-name: "fast-uri"
+      - dependency-name: "hono"
     # Allow specific dependencies
     allow:
       # Only allow security updates for certain packages
